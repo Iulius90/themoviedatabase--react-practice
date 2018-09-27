@@ -2,15 +2,13 @@ import React from "react";
 import "./App.css";
 import Movie from "./components/Movie";
 import Header from "./components/Header";
-import { splitResult } from "./helpers";
-const POPULAR_MOVIES = "https://api.themoviedb.org/3/movie/popular?api_key=";
-const UPCOMING_MOVIES = "https://api.themoviedb.org/3/movie/upcoming?api_key=";
-const NOW_PLAYING_MOVIES =
-  "https://api.themoviedb.org/3/movie/now_playing?api_key=";
-const TOP_RATED_MOVIES =
-  "https://api.themoviedb.org/3/movie/top_rated?api_key=";
+import "bootstrap/dist/css/bootstrap.css";
 
 const API_KEY = process.env.REACT_APP_API_KEY;
+const POPULAR_MOVIES = process.env.REACT_APP_POPULAR_MOVIES;
+const UPCOMING_MOVIES = process.env.REACT_APP_UPCOMING_MOVIES;
+const NOW_PLAYING_MOVIES = process.env.REACT_APP_NOW_PLAYING_MOVIES;
+const TOP_RATED_MOVIES = process.env.REACT_APP_TOP_RATED_MOVIES;
 
 class App extends React.Component {
   constructor(props) {
@@ -20,10 +18,13 @@ class App extends React.Component {
     this.upcomingMovies = this.upcomingMovies.bind(this);
     this.nowPlayingMovies = this.nowPlayingMovies.bind(this);
     this.topRatedMovies = this.topRatedMovies.bind(this);
+    this.handleClick = this.handleClick.bind(this);
 
     this.state = {
       data: [],
-      tabs: [true, false, false, false]
+      tabs: [true, false, false, false],
+      currentPage: 1,
+      itemsPerPage: 8
     };
   }
 
@@ -47,7 +48,8 @@ class App extends React.Component {
       .then(data =>
         this.setState({
           data: data.results,
-          tabs: [true, false, false, false]
+          tabs: [true, false, false, false],
+          currentPage: 1
         })
       );
   }
@@ -60,7 +62,8 @@ class App extends React.Component {
       .then(data =>
         this.setState({
           data: data.results,
-          tabs: [false, true, false, false]
+          tabs: [false, true, false, false],
+          currentPage: 1
         })
       );
   }
@@ -73,7 +76,8 @@ class App extends React.Component {
       .then(data =>
         this.setState({
           data: data.results,
-          tabs: [false, false, true, false]
+          tabs: [false, false, true, false],
+          currentPage: 1
         })
       );
   }
@@ -84,24 +88,63 @@ class App extends React.Component {
         return response.json();
       })
       .then(data =>
-        this.setState({ data: data.results, tabs: [false, false, false, true] })
+        this.setState({
+          data: data.results,
+          tabs: [false, false, false, true],
+          currentPage: 1
+        })
       );
+  }
+
+  handleClick(e) {
+    this.setState({
+      currentPage: Number(e.target.id)
+    });
   }
 
   renderItems() {
     if (this.state.data.length === 0) return <p>Loading</p>;
 
-    if (this.state.data.length > 8) {
-      let resultSplitted = splitResult(this.state.data, 8);
-      console.log(resultSplitted);
-      return (
-        <div className="card-ct">
-          {this.state.data.map(item => (
-            <Movie key={item.id} data={item} />
-          ))}
-        </div>
-      );
+    const { data, currentPage, itemsPerPage } = this.state;
+
+    const indexOfLastTodo = currentPage * itemsPerPage;
+    const indexOfFirstTodo = indexOfLastTodo - itemsPerPage;
+    const currentTodos = data.slice(indexOfFirstTodo, indexOfLastTodo);
+
+    const pageNumbers = [];
+    for (let i = 1; i <= Math.ceil(data.length / itemsPerPage); i++) {
+      pageNumbers.push(i);
     }
+
+    const renderPageNumbers = pageNumbers.map(number => {
+      return (
+        <li
+          className={
+            currentPage === number ? "btn btn-primary" : "btn btn-secondary"
+          }
+          key={number}
+          id={number}
+          onClick={this.handleClick}
+        >
+          {number}
+        </li>
+      );
+    });
+
+    return (
+      <div className="card-ct">
+        {currentTodos.map(movie => {
+          return <Movie key={movie.id} data={movie} />;
+        })}
+
+        <ul
+          className="btn-group"
+          style={{ gridColumn: "1/-1", padding: "0", margin: "0 auto" }}
+        >
+          {renderPageNumbers}
+        </ul>
+      </div>
+    );
   }
 
   render() {
